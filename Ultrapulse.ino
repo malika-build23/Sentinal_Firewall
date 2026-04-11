@@ -9,36 +9,28 @@
 const char* ssid = "Nmae of your wifi";
 const char* password = "Wifi-Password";
 
-// Pins - Environment & IR
+
 #define DHTPIN 4
 #define DHTTYPE DHT11
-#define MQ4_PIN 39
+#define MQ4_PIN 39   
 #define sensor1 25
 #define sensor2 26
-
-// Pins - Room Lighting (LDRs & LEDs)
 #define LDR1 34
 #define LDR2 35
 int room1[] = {13, 12}; 
 int room2[] = {14, 27}; 
-
-// Pins - RFID & Door Servo
 #define SS_PIN 5
 #define RST_PIN 2
 MFRC522 rfid(SS_PIN, RST_PIN);
 Servo doorServo;
 int doorServoPin = 15;
-
-// Pins - Solar Tracker
-#define LDR_LEFT 36   
+#define LDR_LEFT 36 
 #define LDR_RIGHT 33
 Servo solarServo;
 int solarServoPin = 22;
 
-// Global Variables
 float temp = 0, hum = 0;
-int gasValue = 0, solarPos = 90;
-int count = 0; // Back to single count logic
+int gasValue = 0, solarPos = 90, count = 0; 
 String serialMirror = "System Online"; 
 String r1_Status = "OFF", r2_Status = "OFF", doorStatus = "Closed", solarDir = "Stationary";
 unsigned long lastUpdate = 0;
@@ -46,96 +38,125 @@ unsigned long lastUpdate = 0;
 DHT dht(DHTPIN, DHTTYPE);
 AsyncWebServer server(80);
 
-// Professional Dashboard HTML
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-  <title>Sentinel Firewall</title>
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <title>Sentinel Firewall | UltraPulse</title>
   <style>
-    :root { --bg: #0b0e14; --card: #161b22; --primary: #58a6ff; --text: #c9d1d9; --on: #238636; --off: #da3633; --accent: #f6c23e; }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-    .header-line { color: #8b949e; font-size: 1rem; margin-bottom: 5px; }
-    h1 { color: var(--primary); margin: 5px 0; text-transform: uppercase; letter-spacing: 2px; font-size: 1.8rem; text-align: center;}
-    h3 { color: #8b949e; margin-bottom: 25px; font-weight: 400; font-size: 1rem; }
-    .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; width: 100%; max-width: 1000px; }
-    .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #30363d; text-align: center; }
-    .card i { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
-    .label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; font-weight: bold; }
-    .value { font-size: 1.8rem; font-weight: 700; margin: 5px 0; }
-    .status { font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; margin-top: 5px; display: inline-block; }
-    .ON, .Open { background: var(--on); color: white; }
-    .OFF, .Closed, .Denied { background: var(--off); color: white; }
-    .serial-box { width: 100%; max-width: 1000px; background: #000; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #30363d; color: #39ff14; font-family: 'Courier New', monospace; font-size: 1rem; text-align: center; }
-    .features { width: 100%; max-width: 1000px; background: var(--card); border: 1px solid #30363d; border-radius: 12px; margin-top: 20px; padding: 20px; box-sizing: border-box; }
-    .features h4 { color: var(--primary); margin: 0 0 15px 0; text-transform: uppercase; font-size: 0.9rem; border-bottom: 1px solid #30363d; padding-bottom: 5px;}
-    .feature-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; font-size: 0.85rem; color: #c9d1d9; }
-    footer { margin-top: 40px; text-align: center; color: #8b949e; font-size: 0.8rem; padding-bottom: 20px; }
-    .heart { color: #f85149; }
+    :root { 
+      --bg: #0d1117; --card-bg: rgba(22, 27, 34, 0.8); 
+      --primary: #58a6ff; --accent: #f2cc60; 
+      --on: #39d353; --off: #f85149; --text: #c9d1d9; 
+    }
+    body { 
+      font-family: 'Poppins', sans-serif; background: radial-gradient(circle at top right, #161b22, #0d1117); 
+      color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; 
+    }
+    .header-container { text-align: center; margin-bottom: 30px; }
+    .header-line { color: var(--primary); font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; opacity: 0.8; }
+    h1 { font-size: 2.5rem; margin: 10px 0; background: linear-gradient(to right, #58a6ff, #bc85ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; width: 100%; max-width: 1100px; }
+    .card { 
+      background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+      padding: 25px; border-radius: 20px; text-align: center; transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 12px 40px 0 rgba(88, 166, 255, 0.2); }
+    .card i { font-size: 2rem; margin-bottom: 15px; display: block; }
+    .label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .value { font-size: 2.2rem; font-weight: 600; color: #fff; }
+    
+    .status-pill { 
+      font-weight: 600; padding: 6px 15px; border-radius: 50px; font-size: 0.8rem; 
+      margin-top: 15px; display: inline-block; text-transform: uppercase;
+    }
+    .ON, .Open { background: rgba(57, 211, 83, 0.15); color: var(--on); border: 1px solid var(--on); }
+    .OFF, .Closed, .Denied { background: rgba(248, 81, 73, 0.15); color: var(--off); border: 1px solid var(--off); }
+    
+    .serial-box { 
+      width: 100%; max-width: 1100px; background: #000; padding: 20px; border-radius: 15px; 
+      margin-top: 30px; border: 1px solid #30363d; color: var(--on); font-family: 'Courier New', monospace; 
+      box-shadow: inset 0 0 10px rgba(0,0,0,1); border-left: 4px solid var(--primary);
+    }
+
+    .features-section { 
+      width: 100%; max-width: 1100px; background: var(--card-bg); border-radius: 20px; 
+      margin-top: 30px; padding: 30px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+    .feature-item { display: flex; align-items: center; font-size: 0.95rem; }
+    .feature-item i { color: var(--primary); margin-right: 15px; font-size: 1.1rem; }
+
+    footer { margin-top: 50px; padding: 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); width: 100%; }
+    .heart { color: var(--off); animation: beat 1s infinite alternate; }
+    @keyframes beat { from { transform: scale(1); } to { transform: scale(1.2); } }
   </style>
 </head>
 <body>
-  <div class="header-line">House Secured by Design: From Code to Comfort !!</div>
-  <h1>SENTINEL FIREWALL</h1>
-  <h3>Team UltraPulse</h3>
-
-  <div class="container">
-    <div class="card"><i class="fas fa-thermometer-half" style="color:#ff6b6b"></i><div class="label">Temperature</div><div class="value"><span id="temp">0</span>°C</div></div>
-    <div class="card"><i class="fas fa-tint" style="color:#58a6ff"></i><div class="label">Humidity</div><div class="value"><span id="hum">0</span>%</div></div>
-    <div class="card"><i class="fas fa-biohazard" style="color:var(--accent)"></i><div class="label">Gas (MQ4)</div><div class="value"><span id="gas">0</span></div></div>
-    <div class="card"><i class="fas fa-users" style="color:var(--accent)"></i><div class="label">Live Count</div><div class="value"><span id="count">0</span></div></div>
-    
-    <div class="card"><i class="fas fa-key"></i><div class="label">Door Access</div><br><div id="door_stat" class="status Closed">Closed</div></div>
-    <div class="card"><i class="fas fa-lightbulb"></i><div class="label">Room 1</div><br><div id="r1_stat" class="status OFF">OFF</div></div>
-    <div class="card"><i class="fas fa-lightbulb"></i><div class="label">Room 2</div><br><div id="r2_stat" class="status OFF">OFF</div></div>
-    <div class="card"><i class="fas fa-sun" style="color:var(--accent)"></i><div class="label">Solar Panel</div><div class="value"><span id="solar_pos">90</span>°</div><div id="solar_dir" style="color:#58a6ff; font-size:0.75rem;">Stationary</div></div>
+  <div class="header-container">
+    <div class="header-line">House Secured by Design: From Code to Comfort</div>
+    <h1>SENTINEL FIREWALL</h1>
+    <h3 style="font-weight:300; color:#8b949e">Engineering by <span style="color:var(--primary)">Team UltraPulse</span></h3>
   </div>
 
-  <div class="serial-box"><strong>SYSTEM LOG:</strong> <span id="mirror">Initializing...</span></div>
+  <div class="container">
+    <div class="card"><i class="fas fa-temperature-high" style="color:#ff6b6b"></i><div class="label">Atmosphere</div><div class="value"><span id="temp">0</span>&deg;C</div></div>
+    <div class="card"><i class="fas fa-water" style="color:#58a6ff"></i><div class="label">Humidity</div><div class="value"><span id="hum">0</span>%</div></div>
+    <div class="card"><i class="fas fa-wind" style="color:var(--accent)"></i><div class="label">Air Purity</div><div class="value"><span id="gas">0</span></div></div>
+    <div class="card"><i class="fas fa-walking" style="color:#bc85ff"></i><div class="label">Occupancy</div><div class="value"><span id="count">0</span></div></div>
+    <div class="card"><i class="fas fa-fingerprint"></i><div class="label">Main Entrance</div><div id="door_stat" class="status-pill Closed">Secure</div></div>
+    <div class="card"><i class="fas fa-lightbulb"></i><div class="label">Room Alpha</div><div id="r1_stat" class="status-pill OFF">Light OFF</div></div>
+    <div class="card"><i class="fas fa-lightbulb"></i><div class="label">Room Beta</div><div id="r2_stat" class="status-pill OFF">Light OFF</div></div>
+    <div class="card"><i class="fas fa-solar-panel" style="color:var(--accent)"></i><div class="label">Solar Tracking</div><div class="value"><span id="solar_pos">90</span>&deg;</div><div id="solar_dir" style="color:var(--primary); font-size:0.8rem; margin-top:5px">Stationary</div></div>
+  </div>
 
-  <div class="features">
-    <h4>System Features</h4>
-    <div class="feature-list">
-      <div>[+] RFID Door Access Control</div>
-      <div>[+] Automatic Solar Tracking</div>
-      <div>[+] Sequential Entry/Exit Counter</div>
-      <div>[+] LDR Smart Room Lighting</div>
-      <div>[+] Environmental Gas & Temp Monitor</div>
-      <div>[+] Live Web Dashboard (Dark Mode)</div>
+  <div class="serial-box">
+    <i class="fas fa-terminal" style="margin-right:10px"></i><strong>LIVE SYSTEM LOG:</strong> <span id="mirror" style="margin-left:15px">Awaiting hardware interrupt...</span>
+  </div>
+
+  <div class="features-section">
+    <h4 style="margin-top:0; color:var(--primary); letter-spacing:1px">SYSTEM ARCHITECTURE</h4>
+    <div class="feature-grid">
+      <div class="feature-item"><i class="fas fa-shield-alt"></i> RFID Encrypted Door Access</div>
+      <div class="feature-item"><i class="fas fa-sun"></i> Dual-Axis Solar Optimizer</div>
+      <div class="feature-item"> <i class="fas fa-user-check"></i> Smart Bi-Directional Counter</div>
+      <div class="feature-item"><i class="fas fa-bolt"></i> Auto-Light Energy Saver</div>
+      <div class="feature-item"><i class="fas fa-exclamation-triangle"></i> Hazard Gas Detection</div>
+      <div class="feature-item"><i class="fas fa-cloud"></i> IoT Glass UI Dashboard</div>
     </div>
   </div>
 
   <footer>
-    Made with <span class="heart">&hearts;</span> by Team <strong>UltraPulse</strong><br>
-    <strong>Members:</strong> Anurag Verma &middot; Anvi Sharma &middot; Malika Parveen &middot; Trisha Pandey
+    Crafted with <i class="fas fa-heart heart"></i> by Team <strong>UltraPulse</strong><br>
+    <span style="font-size:0.7rem; opacity:0.6">Anurag Verma • Anvi Sharma • Malika Parveen • Trisha Pandey</span>
   </footer>
 
   <script>
-    setInterval(function ( ) {
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          var data = JSON.parse(this.responseText);
-          document.getElementById("temp").innerHTML = data.temp;
-          document.getElementById("hum").innerHTML = data.hum;
-          document.getElementById("gas").innerHTML = data.gas;
-          document.getElementById("count").innerHTML = data.count;
-          document.getElementById("mirror").innerHTML = data.mirror;
-          document.getElementById("solar_pos").innerHTML = data.spos;
-          document.getElementById("solar_dir").innerHTML = data.sdir;
-          document.getElementById("r1_stat").innerHTML = data.r1;
-          document.getElementById("r1_stat").className = "status " + data.r1;
-          document.getElementById("r2_stat").innerHTML = data.r2;
-          document.getElementById("r2_stat").className = "status " + data.r2;
-          document.getElementById("door_stat").innerHTML = data.door;
-          document.getElementById("door_stat").className = "status " + data.door;
-        }
-      };
-      xhttp.open("GET", "/data", true);
-      xhttp.send();
-    }, 400); 
+    setInterval(function(){
+      fetch('/data').then(r => r.json()).then(data => {
+        document.getElementById("temp").innerHTML = data.temp;
+        document.getElementById("hum").innerHTML = data.hum;
+        document.getElementById("gas").innerHTML = data.gas;
+        document.getElementById("count").innerHTML = data.count;
+        document.getElementById("mirror").innerHTML = data.mirror;
+        document.getElementById("solar_pos").innerHTML = data.spos;
+        document.getElementById("solar_dir").innerHTML = data.sdir;
+        
+        const updateStatus = (id, val, prefix) => {
+          const el = document.getElementById(id);
+          el.innerHTML = prefix + " " + val;
+          el.className = "status-pill " + val;
+        };
+        updateStatus("r1_stat", data.r1, "ROOM A:");
+        updateStatus("r2_stat", data.r2, "ROOM B:");
+        updateStatus("door_stat", data.door, "DOOR:");
+      });
+    }, 400);
   </script>
 </body></html>)rawliteral";
 
@@ -144,21 +165,14 @@ void setup() {
   pinMode(sensor1, INPUT_PULLUP); pinMode(sensor2, INPUT_PULLUP);
   pinMode(MQ4_PIN, INPUT); pinMode(LDR1, INPUT); pinMode(LDR2, INPUT);
   for (int i = 0; i < 2; i++) { pinMode(room1[i], OUTPUT); pinMode(room2[i], OUTPUT); }
-
   SPI.begin(18, 19, 23, 5);
   rfid.PCD_Init();
   doorServo.attach(doorServoPin, 500, 2400); doorServo.write(0);
   solarServo.attach(solarServoPin, 500, 2400); solarServo.write(solarPos);
-
   dht.begin();
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.println("\nIP: " + WiFi.localIP().toString());
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", index_html);
-  });
-
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ request->send_P(200, "text/html", index_html); });
   server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request){
     String json = "{\"temp\":\"" + String(temp, 1) + "\",\"hum\":\"" + String(hum, 1) + "\",\"gas\":\"" + String(gasValue) + 
                   "\",\"count\":\"" + String(count) + "\",\"mirror\":\"" + serialMirror + 
@@ -174,51 +188,32 @@ void loop() {
     lastUpdate = millis();
     gasValue = analogRead(MQ4_PIN); temp = dht.readTemperature(); hum = dht.readHumidity();
   }
-
-  // Room Light Logic
   int l1 = analogRead(LDR1); int l2 = analogRead(LDR2);
   if(l1 > 2500) { digitalWrite(room1[0], HIGH); digitalWrite(room1[1], HIGH); r1_Status = "ON"; } else { digitalWrite(room1[0], LOW); digitalWrite(room1[1], LOW); r1_Status = "OFF"; }
   if(l2 > 2500) { digitalWrite(room2[0], HIGH); digitalWrite(room2[1], HIGH); r2_Status = "ON"; } else { digitalWrite(room2[0], LOW); digitalWrite(room2[1], LOW); r2_Status = "OFF"; }
-
-  // Solar Tracker
   int leftL = analogRead(LDR_LEFT); int rightR = analogRead(LDR_RIGHT);
-  int diff = leftL - rightR;
-  if (abs(diff) > 80) {
+  if (abs(leftL - rightR) > 80) {
     if (leftL > rightR) { solarPos--; solarDir = "Moving Left"; } else { solarPos++; solarDir = "Moving Right"; }
     solarPos = constrain(solarPos, 0, 180); solarServo.write(solarPos);
   } else { solarDir = "Stationary"; }
-
-  // RFID Access
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
     String id = "";
     for (byte i = 0; i < rfid.uid.size; i++) { id += String(rfid.uid.uidByte[i] < 0x10 ? "0" : ""); id += String(rfid.uid.uidByte[i], HEX); }
     id.toUpperCase();
     if (id == "C4AB6A05") {
-      serialMirror = "ACCESS GRANTED - Door Opening"; doorStatus = "Open"; doorServo.write(90);
-      delay(3000); doorServo.write(0); doorStatus = "Closed"; serialMirror = "Door Closed";
+      serialMirror = "ACCESS GRANTED"; doorStatus = "Open"; doorServo.write(90); delay(3000); 
+      doorServo.write(0); doorStatus = "Closed"; serialMirror = "Door Locked";
     } else { serialMirror = "ACCESS DENIED"; doorStatus = "Denied"; }
     rfid.PICC_HaltA(); rfid.PCD_StopCrypto1();
   }
-
-  // ENTRY/EXIT Logic - Back to original count logic
   if (digitalRead(sensor1) == LOW) {
     unsigned long t = millis();
-    while (digitalRead(sensor2) == HIGH && millis() - t < 1500);
-    if (digitalRead(sensor2) == LOW) { 
-      count++; 
-      serialMirror = "Entry -> Count: " + String(count); // Exact serial style
-      Serial.println(serialMirror); 
-      delay(500); 
-    }
+    while (digitalRead(sensor2) == HIGH && (millis() - t < 1500));
+    if (digitalRead(sensor2) == LOW) { count++; serialMirror = "Entry Detected - Total: " + String(count); delay(500); }
   }
   if (digitalRead(sensor2) == LOW) {
     unsigned long t = millis();
-    while (digitalRead(sensor1) == HIGH && millis() - t < 1500);
-    if (digitalRead(sensor1) == LOW) { 
-      if (count > 0) count--; 
-      serialMirror = "Exit -> Count: " + String(count); // Exact serial style
-      Serial.println(serialMirror); 
-      delay(500); 
-    }
+    while (digitalRead(sensor1) == HIGH && (millis() - t < 1500));
+    if (digitalRead(sensor1) == LOW) { if (count > 0) count--; serialMirror = "Exit Detected - Total: " + String(count); delay(500); }
   }
 }
