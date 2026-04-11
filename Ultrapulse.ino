@@ -5,11 +5,9 @@
 #include <MFRC522.h>
 #include <ESP32Servo.h>
 
-// ========================
-// CONFIGURATION
-// ========================
 const char* ssid = "Wifi Namw";
 const char* password = "Password";
+
 
 #define DHTPIN 4
 #define DHTTYPE DHT11
