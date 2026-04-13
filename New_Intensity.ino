@@ -2,8 +2,8 @@
 #include <ESPAsyncWebServer.h>
 
 
-const char* ssid = "Infinix NOTE 40 Pro 5G";
-const char* password = "786Malikaa";
+const char* ssid = "wifi name";
+const char* password = "Password";
 
 // Pins - LDR and LEDs
 #define LDR_SENSOR 34   // Reading room luminosity
